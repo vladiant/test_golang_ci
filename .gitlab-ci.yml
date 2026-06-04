@@ -133,8 +133,12 @@ docker:
   variables:
     DOCKER_BUILDKIT: "1"
     IMAGE_NAME: "$CI_REGISTRY_IMAGE"
+    DOCKER_PUSH: "true"
   before_script:
-    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    - |
+      if [ "$DOCKER_PUSH" = "true" ]; then
+        docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+      fi
   script:
     # Determine the image tag: semver tag or branch name
     - |
@@ -152,21 +156,19 @@ docker:
         --tag "$IMAGE_NAME:$IMAGE_TAG" \
         --tag "$IMAGE_NAME:$CI_COMMIT_SHORT_SHA" \
         .
-    - docker push "$IMAGE_NAME:$IMAGE_TAG"
-    - docker push "$IMAGE_NAME:$CI_COMMIT_SHORT_SHA"
-    # Update the 'latest' tag on default branch and semver tags
     - |
-      if [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ] || [ -n "$CI_COMMIT_TAG" ]; then
-        docker tag "$IMAGE_NAME:$IMAGE_TAG" "$IMAGE_NAME:latest"
-        docker push "$IMAGE_NAME:latest"
+      if [ "$DOCKER_PUSH" = "true" ]; then
+        docker push "$IMAGE_NAME:$IMAGE_TAG"
+        docker push "$IMAGE_NAME:$CI_COMMIT_SHORT_SHA"
+        # Update the 'latest' tag on default branch and semver tags
+        if [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ] || [ -n "$CI_COMMIT_TAG" ]; then
+          docker tag "$IMAGE_NAME:$IMAGE_TAG" "$IMAGE_NAME:latest"
+          docker push "$IMAGE_NAME:latest"
+        fi
       fi
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
     - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
       variables:
-        # Build but don't push on MRs
-        CI_REGISTRY_USER: ""
-        CI_REGISTRY_PASSWORD: ""
-      script:
-        - docker build -t "$IMAGE_NAME:mr-$CI_MERGE_REQUEST_IID" .
+        DOCKER_PUSH: "false"  # build only, no push on MRs
