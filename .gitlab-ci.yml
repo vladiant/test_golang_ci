@@ -50,6 +50,7 @@ lint:
   <<: *go-cache
   variables:
     CGO_ENABLED: "1"  # required by -race
+    GOTOOLCHAIN: "auto"  # allow downloading newer toolchain for go install
   script:
     - go mod download
     - go test -race -coverprofile=coverage.out -covermode=atomic ./...
