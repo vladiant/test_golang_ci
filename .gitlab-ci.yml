@@ -104,7 +104,7 @@ security:
   <<: *go-cache
   script:
     - go install golang.org/x/vuln/cmd/govulncheck@latest
-    - govulncheck ./...
+    - $GOPATH/bin/govulncheck ./...
   allow_failure: false
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
