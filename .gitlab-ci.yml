@@ -74,11 +74,11 @@ lint:
 
 test:go1.23:
   extends: .test-base
-  image: golang:1.23-alpine
+  image: golang:1.23
 
 test:go1.24:
   extends: .test-base
-  image: golang:1.24-alpine
+  image: golang:1.24
 
 # ── Build ──────────────────────────────────────────────────────────────────────
 build:
