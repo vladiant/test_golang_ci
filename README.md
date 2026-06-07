@@ -6,7 +6,7 @@
 [![GitLab Pipeline](https://gitlab.com/vladiant/test_golang_ci/badges/main/pipeline.svg)](https://gitlab.com/vladiant/test_golang_ci/-/pipelines)
 [![GitLab Coverage](https://gitlab.com/vladiant/test_golang_ci/badges/main/coverage.svg)](https://gitlab.com/vladiant/test_golang_ci/-/jobs)
 [![Go Report Card](https://goreportcard.com/badge/github.com/vladiant/test_golang_ci)](https://goreportcard.com/report/github.com/vladiant/test_golang_ci)
-[![codecov](https://codecov.io/gh/vladiant/test_golang_ci/branch/main/graph/badge.svg)](https://codecov.io/gh/vladiant/test_golang_ci)
+[![Coverage Status](https://coveralls.io/repos/github/vladiant/test_golang_ci/badge.svg?branch=main)](https://coveralls.io/github/vladiant/test_golang_ci?branch=main)
 
 A simple Go project demonstrating CI/CD best practices with GitHub Actions.
 
@@ -44,7 +44,7 @@ A simple Go project demonstrating CI/CD best practices with GitHub Actions.
 | Job | Description |
 |-----|-------------|
 | **lint** | Runs `golangci-lint` (misspell, revive, gocritic, goimports) |
-| **test** | Runs tests with `-race` and coverage; matrix across Go 1.22 & 1.23 |
+| **test** | Runs tests with `-race` and coverage; matrix across Go 1.23 & 1.24; uploads results to Coveralls |
 | **build** | Compiles the binary and uploads it as a workflow artifact |
 | **security** | Runs `govulncheck` to detect known vulnerabilities |
 
