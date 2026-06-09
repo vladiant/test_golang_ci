@@ -1,13 +1,18 @@
+version: "2"
+
 linters:
   enable:
     - misspell
     - revive
     - gocritic
-    - goimports
 
-linters-settings:
-  goimports:
-    local-prefixes: github.com/vladiant/test_golang_ci
+formatters:
+  enable:
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/vladiant/test_golang_ci
 
 issues:
   max-issues-per-linter: 50

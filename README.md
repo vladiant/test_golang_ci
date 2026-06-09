@@ -68,7 +68,7 @@ The `.gitlab-ci.yml` mirrors the GitHub Actions pipeline for teams hosting on Gi
 
 | Stage | Job | Description |
 |-------|-----|-------------|
-| **lint** | `lint` | golangci-lint v1.64.8 |
+| **lint** | `lint` | golangci-lint v2.12.2 |
 | **test** | `test:go1.23`, `test:go1.24` | Parallel matrix; coverage report published to MR |
 | **build** | `build` | Compiles binary; uploaded as a pipeline artifact |
 | **security** | `security` | govulncheck against stdlib and dependencies |
