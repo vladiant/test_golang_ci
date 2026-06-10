@@ -1,0 +1,179 @@
+# ── Global defaults ────────────────────────────────────────────────────────────
+default:
+  image: golang:1.23-alpine
+
+variables:
+  # Module cache shared across all jobs on the same runner
+  GOPATH: "$CI_PROJECT_DIR/.go"
+  GOMODCACHE: "$CI_PROJECT_DIR/.go/pkg/mod"
+  CGO_ENABLED: "0"
+  GOTOOLCHAIN: "auto"  # allow go install to fetch a newer toolchain when needed
+
+# Persist the module cache between pipelines
+.go-cache: &go-cache
+  cache:
+    key:
+      files:
+        - go.sum
+    paths:
+      - .go/pkg/mod/
+    policy: pull-push
+
+# ── Stages ─────────────────────────────────────────────────────────────────────
+stages:
+  - lint
+  - test
+  - build
+  - security
+  - release
+  - docker
+
+# ── Lint ───────────────────────────────────────────────────────────────────────
+lint:
+  stage: lint
+  <<: *go-cache
+  before_script:
+    - apk add --no-cache curl
+    - curl -sSfL https://golangci-lint.run/install.sh
+      | sh -s -- -b $(go env GOPATH)/bin v2.12.2
+    - export PATH="$(go env GOPATH)/bin:$PATH"
+  script:
+    - export PATH="$(go env GOPATH)/bin:$PATH"
+    - golangci-lint run ./...
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG
+
+# ── Test (parallel across Go versions) ─────────────────────────────────────────
+.test-base:
+  stage: test
+  <<: *go-cache
+  variables:
+    CGO_ENABLED: "1"  # required by -race
+  script:
+    - go mod download
+    - go test -race -coverprofile=coverage.out -covermode=atomic ./...
+    - go tool cover -func=coverage.out
+    # Convert to Cobertura XML for GitLab MR coverage visualisation
+    - go install github.com/boumenot/gocover-cobertura@latest
+    - $GOPATH/bin/gocover-cobertura < coverage.out > coverage.xml
+  artifacts:
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+    paths:
+      - coverage.out
+      - coverage.xml
+    expire_in: 7 days
+  coverage: '/^total:\s+\(statements\)\s+(\d+\.\d+)%/'
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG
+
+test:go1.23:
+  extends: .test-base
+  image: golang:1.23
+
+test:go1.24:
+  extends: .test-base
+  image: golang:1.24
+
+# ── Build ──────────────────────────────────────────────────────────────────────
+build:
+  stage: build
+  <<: *go-cache
+  needs: [lint, test:go1.23, test:go1.24]
+  script:
+    - go build -ldflags="-s -w" -o calc ./cmd/
+  artifacts:
+    name: "calc-linux-amd64-${CI_COMMIT_SHORT_SHA}"
+    paths:
+      - calc
+    expire_in: 7 days
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG
+
+# ── Security scan ──────────────────────────────────────────────────────────────
+security:
+  stage: security
+  <<: *go-cache
+  script:
+    - go install golang.org/x/vuln/cmd/govulncheck@latest
+    - $GOPATH/bin/govulncheck ./...
+  allow_failure: false
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG
+
+# ── Release (tags only) ────────────────────────────────────────────────────────
+release:
+  stage: release
+  image: goreleaser/goreleaser:latest
+  needs: [build, security]
+  variables:
+    GIT_DEPTH: 0  # full history required for changelog
+  script:
+    - goreleaser release --clean
+  artifacts:
+    name: "release-${CI_COMMIT_TAG}"
+    paths:
+      - dist/
+    expire_in: 30 days
+  rules:
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/
+
+# ── Docker build & push ────────────────────────────────────────────────────────
+docker:
+  stage: docker
+  image: docker:27-cli
+  services:
+    - docker:27-dind
+  needs: [build, security]
+  variables:
+    DOCKER_BUILDKIT: "1"
+    IMAGE_NAME: "$CI_REGISTRY_IMAGE"
+    DOCKER_PUSH: "true"
+  before_script:
+    - |
+      if [ "$DOCKER_PUSH" = "true" ]; then
+        docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+      fi
+  script:
+    # Determine the image tag: semver tag or branch name
+    - |
+      if [ -n "$CI_COMMIT_TAG" ]; then
+        IMAGE_TAG="$CI_COMMIT_TAG"
+      else
+        IMAGE_TAG="$CI_COMMIT_REF_SLUG"
+      fi
+    - |
+      docker build \
+        --build-arg BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+        --build-arg VCS_REF="$CI_COMMIT_SHORT_SHA" \
+        --build-arg VERSION="${CI_COMMIT_TAG:-$CI_COMMIT_SHORT_SHA}" \
+        --cache-from "$IMAGE_NAME:latest" \
+        --tag "$IMAGE_NAME:$IMAGE_TAG" \
+        --tag "$IMAGE_NAME:$CI_COMMIT_SHORT_SHA" \
+        .
+    - |
+      if [ "$DOCKER_PUSH" = "true" ]; then
+        docker push "$IMAGE_NAME:$IMAGE_TAG"
+        docker push "$IMAGE_NAME:$CI_COMMIT_SHORT_SHA"
+        # Update the 'latest' tag on default branch and semver tags
+        if [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ] || [ -n "$CI_COMMIT_TAG" ]; then
+          docker tag "$IMAGE_NAME:$IMAGE_TAG" "$IMAGE_NAME:latest"
+          docker push "$IMAGE_NAME:latest"
+        fi
+      fi
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+/
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      variables:
+        DOCKER_PUSH: "false"  # build only, no push on MRs

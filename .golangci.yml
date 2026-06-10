@@ -5,8 +5,10 @@ linters:
     - misspell
     - revive
     - gocritic
-    - goimports
 
+formatters:
+  enable:
+    - goimports
   settings:
     goimports:
       local-prefixes:
