@@ -103,7 +103,7 @@ security:
   stage: security
   <<: *go-cache
   script:
-    - go install golang.org/x/vuln/cmd/govulncheck@latest
+    - go install golang.org/x/vuln/cmd/govulncheck@v1.1.4
     - $GOPATH/bin/govulncheck ./...
   allow_failure: false
   rules:
