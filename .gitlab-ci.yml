@@ -121,6 +121,7 @@ release:
   variables:
     GIT_DEPTH: 0  # full history required for changelog
   script:
+    - export GITLAB_TOKEN="${GITLAB_TOKEN:-$CI_JOB_TOKEN}"
     - goreleaser release --clean --config .goreleaser.gitlab.yml
   artifacts:
     name: "release-${CI_COMMIT_TAG}"
