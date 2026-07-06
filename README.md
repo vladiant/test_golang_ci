@@ -5,7 +5,7 @@
 [![Docker](https://github.com/vladiant/test_golang_ci/actions/workflows/docker.yml/badge.svg)](https://github.com/vladiant/test_golang_ci/actions/workflows/docker.yml)
 [![GitLab Pipeline](https://gitlab.com/vladiant/test_golang_ci/badges/main/pipeline.svg)](https://gitlab.com/vladiant/test_golang_ci/-/pipelines)
 [![GitLab Coverage](https://gitlab.com/vladiant/test_golang_ci/badges/main/coverage.svg)](https://gitlab.com/vladiant/test_golang_ci/-/jobs)
-[![Go Report Card](https://goreportcard.com/badge/github.com/vladiant/test_golang_ci)](https://goreportcard.com/report/github.com/vladiant/test_golang_ci)
+[![golangci-lint](https://img.shields.io/github/actions/workflow/status/vladiant/test_golang_ci/ci.yml?branch=main&label=golangci-lint)](https://github.com/vladiant/test_golang_ci/actions/workflows/ci.yml)
 [![Coverage Status](https://coveralls.io/repos/github/vladiant/test_golang_ci/badge.svg?branch=main)](https://coveralls.io/github/vladiant/test_golang_ci?branch=main)
 
 A simple Go project demonstrating CI/CD best practices with GitHub Actions.
