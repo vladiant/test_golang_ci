@@ -114,7 +114,9 @@ security:
 # ── Release (tags only) ────────────────────────────────────────────────────────
 release:
   stage: release
-  image: goreleaser/goreleaser:latest
+  image:
+    name: goreleaser/goreleaser:latest
+    entrypoint: [""]
   needs: [build, security]
   variables:
     GIT_DEPTH: 0  # full history required for changelog
