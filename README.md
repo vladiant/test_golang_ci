@@ -85,7 +85,7 @@ MR pipelines build the Docker image but skip the push (no registry credentials i
 | `CI_REGISTRY_USER` | Auto-provided | GitLab registry username |
 | `CI_REGISTRY_PASSWORD` | Auto-provided | GitLab registry token |
 | `CI_REGISTRY` | Auto-provided | Registry host (`registry.gitlab.com`) |
-| `GITLAB_TOKEN` | Project → Settings → CI/CD | Personal access token for GoReleaser |
+| `GITLAB_TOKEN` | Project → Settings → CI/CD | Personal or project access token with `api` scope for GitLab releases |
 
 ## Usage
 
@@ -122,6 +122,8 @@ docker run --rm calc multiply 6 7   # → 42
 ```
 
 ### Release
+
+GitHub tag pushes use the default GoReleaser config and publish to GitHub Releases. GitLab tag pipelines use a GitLab-specific GoReleaser config and require `GITLAB_TOKEN` to be set in CI/CD variables.
 
 Push a version tag to trigger GoReleaser:
 
